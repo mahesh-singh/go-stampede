@@ -3,16 +3,14 @@ package gostampede
 import (
 	"encoding/json"
 	"fmt"
+	"sort"
+	"strings"
 )
 
 type Oplog struct {
-	Op string //Add json field
-	Ns string
-	O  json.RawMessage //this should allow to store arbitrary json object
-	//Can take map
-	/*
-		Type fields must start with uppercase char so that during unmarshal, these filed can be access
-	*/
+	Op string                 `json:op`
+	Ns string                 `json:ns`
+	O  map[string]interface{} `json:o`
 }
 
 func LoadOplog(oplog []byte) Oplog {
@@ -28,41 +26,39 @@ func LoadOplog(oplog []byte) Oplog {
 	return oplogObj
 }
 
-func (oplog *Oplog) GetInsertStatement() string {
+func (oplog *Oplog) GetInsertStatement() (string, error) {
 	//return error and string both
 
 	if oplog.Op == "i" {
-		var f interface{}
-		err := json.Unmarshal(oplog.O, &f)
-		if err != nil {
-			fmt.Println(err)
 
-		}
-		m := f.(map[string]interface{})
-		fieldName := ""
-		fieldvalue := ""
+		fieldNames := make([]string, 0, len(oplog.O))
 
-		for k, v := range m {
-			if fieldName == "" {
-				fieldName = k
-			} else {
-				fieldName = fieldName + "," + k
-			}
-
-			switch vv := v.(type) {
-			case string:
-				fieldvalue = fieldvalue + fmt.Sprintf("'%s',", vv)
-			case float64:
-				fieldvalue = fieldvalue + fmt.Sprintf("%v,", vv)
-			}
-
-		}
-		if fieldvalue != "" {
-			fieldvalue = fieldvalue[0 : len(fieldvalue)-1]
+		for fieldName, _ := range oplog.O {
+			fieldNames = append(fieldNames, fieldName)
 		}
 
-		return fmt.Sprintf("INSERT INTO %s (%s) VALUES (%s)", oplog.Ns, fieldName, fieldvalue)
+		sort.Strings(fieldNames)
+		fieldValues := make([]string, 0, len(fieldNames))
+		for _, field := range fieldNames {
+			fieldValues = append(fieldValues, getStringFormatValue(oplog.O[field]))
+		}
+
+		return fmt.Sprintf("INSERT INTO %s (%s) VALUES (%s)", oplog.Ns, strings.Join(fieldNames, ", "), strings.Join(fieldValues, ", ")), nil
 
 	}
-	return ""
+	return "", fmt.Errorf("error in generating the insert statement for oplog %v", oplog)
 }
+
+func getStringFormatValue(value interface{}) string {
+	switch v := value.(type) {
+	case float64:
+		return fmt.Sprintf("%v", v)
+	case bool:
+		return fmt.Sprintf("%t", v)
+	default:
+		return fmt.Sprintf("'%s'", v)
+	}
+
+}
+
+//TODO: Check for test coverage
