@@ -17,9 +17,11 @@ func TestOplog_GetInsertStatement(t *testing.T) {
 			"o": {
 			  "_id": "635b79e231d82a8ab1de863b",
 			  "name": "Selena Miller",
-			  "roll_no": 51
+			  "roll_no": 51,
+			  "is_graduated": false,
+    		  "date_of_birth": "2000-01-30"
 			}
-		  }`), want: "INSERT INTO test.student (_id, name, roll_no) VALUES ('635b79e231d82a8ab1de863b', 'Selena Miller', 51)"},
+		  }`), want: "INSERT INTO test.student (_id, date_of_birth, is_graduated, name, roll_no) VALUES ('635b79e231d82a8ab1de863b', '2000-01-30', false, 'Selena Miller', 51);"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

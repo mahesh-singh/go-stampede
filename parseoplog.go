@@ -43,7 +43,7 @@ func (oplog *Oplog) GetInsertStatement() (string, error) {
 			fieldValues = append(fieldValues, getStringFormatValue(oplog.O[field]))
 		}
 
-		return fmt.Sprintf("INSERT INTO %s (%s) VALUES (%s)", oplog.Ns, strings.Join(fieldNames, ", "), strings.Join(fieldValues, ", ")), nil
+		return fmt.Sprintf("INSERT INTO %s (%s) VALUES (%s);", oplog.Ns, strings.Join(fieldNames, ", "), strings.Join(fieldValues, ", ")), nil
 
 	}
 	return "", fmt.Errorf("error in generating the insert statement for oplog %v", oplog)
