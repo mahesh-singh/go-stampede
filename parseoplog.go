@@ -52,24 +52,51 @@ func (oplog *Oplog) GetInsertStatement() (string, error) {
 
 func (oplog *Oplog) GetUpdateStatement() (string, error) {
 	if oplog.Op == "u" {
-		diff := oplog.O["diff"].(map[string]interface{})
+		diff, Ok := oplog.O["diff"].(map[string]interface{})
+		if !Ok {
+			panic(fmt.Sprintf("oplog don't have diff: %v", oplog))
+		}
+
 		fieldNameValuePair := make([]string, 0, len(diff))
+
 		if values, ok := diff["u"]; ok {
-			//update the fileds
+			//update the fields
 			for f, v := range values.(map[string]interface{}) {
-				fieldNameValuePair = append(fieldNameValuePair, fmt.Sprintf("%s = %v", f, getStringFormatValue(v)))
+				fieldNameValuePair = append(fieldNameValuePair, fmt.Sprintf("%s = %s", f, getStringFormatValue(v)))
 			}
-		} else if values, ok := diff["d"]; ok {
+		}
+		if values, ok := diff["d"]; ok {
 			//set value null
 			for f, _ := range values.(map[string]interface{}) {
 				fieldNameValuePair = append(fieldNameValuePair, fmt.Sprintf("%s = NULL", f))
 			}
 		}
-		id := fmt.Sprintf("_id = %s", getStringFormatValue(oplog.O2["_id"]))
-		query := fmt.Sprintf("UPDATE %s SET %s WHERE %s;", oplog.Ns, strings.Join(fieldNameValuePair, ", "), id)
+		sort.Strings(fieldNameValuePair)
+
+		whereClause := make([]string, 0, len(oplog.O2))
+		for field, value := range oplog.O2 {
+			whereClause = append(whereClause, fmt.Sprintf("%s = %s", field, getStringFormatValue(value)))
+		}
+
+		query := fmt.Sprintf("UPDATE %s SET %s WHERE %s;", oplog.Ns, strings.Join(fieldNameValuePair, ", "), strings.Join(whereClause, " AND "))
 		return query, nil
 	} else {
 		return "", fmt.Errorf("error while generating update statement for oplog: %v", oplog)
+	}
+}
+
+func (oplog *Oplog) GetDeleteStatement() (string, error) {
+	if oplog.Op == "d" {
+		deleteClauseFieldValuePair := make([]string, 0, len(oplog.O))
+
+		for fieldName, fieldValue := range oplog.O {
+			deleteClauseFieldValuePair = append(deleteClauseFieldValuePair, fmt.Sprintf("%s = %s", fieldName, getStringFormatValue(fieldValue)))
+		}
+
+		deleteQuery := fmt.Sprintf("DELETE FROM %s WHERE %s;", oplog.Ns, strings.Join(deleteClauseFieldValuePair, " AND "))
+		return deleteQuery, nil
+	} else {
+		return "", fmt.Errorf("error while generating delete statement from oplog: %v", oplog)
 	}
 }
 

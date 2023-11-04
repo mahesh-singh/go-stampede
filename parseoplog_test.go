@@ -35,6 +35,7 @@ func TestOplog_GetInsertStatement(t *testing.T) {
 
 func TestOplog_GetUpdateStatement(t *testing.T) {
 
+	//TODO: Add more test case
 	tests := []struct {
 		name     string
 		oplogStr []byte
@@ -83,6 +84,37 @@ func TestOplog_GetUpdateStatement(t *testing.T) {
 			}
 			if got != tt.want {
 				t.Errorf("Oplog.GetUpdateStatement() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestOplog_GetDeleteStatement(t *testing.T) {
+
+	tests := []struct {
+		name     string
+		oplogStr []byte
+		want     string
+		wantErr  bool
+	}{
+		{name: "Delete statement", oplogStr: []byte(`{
+			"op": "d",
+			"ns": "test.student",
+			"o": {
+			  "_id": "635b79e231d82a8ab1de863b"
+			}
+		  }`), want: "DELETE FROM test.student WHERE _id = '635b79e231d82a8ab1de863b';", wantErr: false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			oplog := LoadOplog(tt.oplogStr)
+			got, err := oplog.GetDeleteStatement()
+			if (err != nil) != tt.wantErr {
+				t.Errorf("Oplog.GetDeleteStatement() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if got != tt.want {
+				t.Errorf("Oplog.GetDeleteStatement() = %v, want %v", got, tt.want)
 			}
 		})
 	}
