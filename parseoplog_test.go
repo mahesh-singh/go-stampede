@@ -21,7 +21,7 @@ func TestOplog_GetInsertStatement(t *testing.T) {
 			  "is_graduated": false,
     		  "date_of_birth": "2000-01-30"
 			}
-		  }`), want: "INSERT INTO test.student (_id, date_of_birth, is_graduated, name, roll_no) VALUES ('635b79e231d82a8ab1de863b', '2000-01-30', false, 'Selena Miller', 51);"},
+		  }`), want: "CREATE SCHEMA IF NOT EXISTS test; CREATE TABLE IF NOT EXISTS test.student (_id VARCHAR(255) PRIMARY KEY, date_of_birth VARCHAR(255), is_graduated BOOLEAN, name VARCHAR(255), roll_no FLOAT); INSERT INTO test.student (_id, date_of_birth, is_graduated, name, roll_no) VALUES ('635b79e231d82a8ab1de863b', '2000-01-30', false, 'Selena Miller', 51);"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -119,3 +119,7 @@ func TestOplog_GetDeleteStatement(t *testing.T) {
 		})
 	}
 }
+
+/*
+reflect.DeepEqual
+*/

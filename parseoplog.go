@@ -40,11 +40,21 @@ func (oplog *Oplog) GetInsertStatement() (string, error) {
 
 		sort.Strings(fieldNames)
 		fieldValues := make([]string, 0, len(fieldNames))
+		createFields := make([]string, 0, len(fieldNames))
 		for _, field := range fieldNames {
 			fieldValues = append(fieldValues, getStringFormatValue(oplog.O[field]))
-		}
+			if field == "_id" {
+				createFields = append(createFields, fmt.Sprintf("%s %s PRIMARY KEY", field, getSQLDataType(oplog.O[field])))
+			} else {
+				createFields = append(createFields, fmt.Sprintf("%s %s", field, getSQLDataType(oplog.O[field])))
+			}
 
-		return fmt.Sprintf("INSERT INTO %s (%s) VALUES (%s);", oplog.Ns, strings.Join(fieldNames, ", "), strings.Join(fieldValues, ", ")), nil
+		}
+		createSchemaDDL := fmt.Sprintf("CREATE SCHEMA IF NOT EXISTS %s;", strings.Split(oplog.Ns, ".")[0])
+		createTableDDL := fmt.Sprintf("CREATE TABLE IF NOT EXISTS %s (%s);", oplog.Ns, strings.Join(createFields, ", "))
+		query := fmt.Sprintf("INSERT INTO %s (%s) VALUES (%s);", oplog.Ns, strings.Join(fieldNames, ", "), strings.Join(fieldValues, ", "))
+
+		return fmt.Sprintf("%s %s %s", createSchemaDDL, createTableDDL, query), nil
 
 	}
 	return "", fmt.Errorf("error in generating the insert statement for oplog %v", oplog)
@@ -108,6 +118,18 @@ func getStringFormatValue(value interface{}) string {
 		return fmt.Sprintf("%t", v)
 	default:
 		return fmt.Sprintf("'%s'", v)
+	}
+
+}
+
+func getSQLDataType(t interface{}) string {
+	switch t.(type) {
+	case float64:
+		return "FLOAT"
+	case bool:
+		return "BOOLEAN"
+	default:
+		return "VARCHAR(255)"
 	}
 
 }
